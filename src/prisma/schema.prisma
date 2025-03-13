@@ -1,0 +1,130 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  name          String
+  password      String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  events        Event[]
+  rsvps         RSVP[]
+  messages      Message[]
+  pollVotes     PollVote[]
+}
+
+model Event {
+  id            String    @id @default(uuid())
+  title         String
+  datetime      DateTime
+  locationText  String
+  latitude      Float?
+  longitude     Float?
+  description   String?
+  isPublic      Boolean   @default(false)
+  hasFoodOrDrinks Boolean @default(false)
+  eventType     String?   // Corresponds to EventType enum
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relations
+  creatorId     String
+  creator       User      @relation(fields: [creatorId], references: [id])
+  rsvps         RSVP[]
+  messages      Message[]
+  polls         Poll[]
+}
+
+model RSVP {
+  id            String    @id @default(uuid())
+  status        RSVPStatus
+  hasPlusOne    Boolean   @default(false)
+  plusOneName   String?
+  comment       String?
+  
+  // Structured dietary preferences
+  dietaryPatterns String[]  // Array of pattern IDs
+  religiousDietary String[] // Array of religious dietary IDs
+  allergies String[]        // Array of allergy IDs
+  lifestyleChoices String[] // Array of lifestyle IDs
+  intensityPrefs String[]   // Array of intensity IDs
+  alcoholPrefs String[]     // Array of alcohol preference IDs
+  
+  // For anything not covered by the structured options
+  customDietaryNotes String?
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  userId        String
+  user          User      @relation(fields: [userId], references: [id])
+  eventId       String
+  event         Event     @relation(fields: [eventId], references: [id])
+
+  @@unique([userId, eventId])
+}
+
+model Message {
+  id            String    @id @default(uuid())
+  text          String
+  createdAt     DateTime  @default(now())
+
+  // Relations
+  userId        String
+  user          User      @relation(fields: [userId], references: [id])
+  eventId       String
+  event         Event     @relation(fields: [eventId], references: [id])
+}
+
+model Poll {
+  id            String    @id @default(uuid())
+  question      String
+  options       PollOption[]
+  closeAt       DateTime?
+  isClosed      Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  eventId       String
+  event         Event     @relation(fields: [eventId], references: [id])
+}
+
+model PollOption {
+  id            String    @id @default(uuid())
+  text          String
+  
+  // Relations
+  pollId        String
+  poll          Poll      @relation(fields: [pollId], references: [id])
+  votes         PollVote[]
+}
+
+model PollVote {
+  id            String    @id @default(uuid())
+  createdAt     DateTime  @default(now())
+
+  // Relations
+  userId        String
+  user          User      @relation(fields: [userId], references: [id])
+  optionId      String
+  option        PollOption @relation(fields: [optionId], references: [id])
+
+  @@unique([userId, optionId])
+}
+
+enum RSVPStatus {
+  YES
+  MAYBE
+  NO
+} 
